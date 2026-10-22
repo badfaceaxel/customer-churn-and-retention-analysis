@@ -56,3 +56,45 @@ SELECT
 FROM rfm_scores
 GROUP BY customer_segment
 ORDER BY avg_spend DESC;
+
+-- 4. Query to enrich the original table with RFM segmentation by customer
+
+WITH rfm_scores AS (
+    SELECT 
+        customer_id,
+        gender,
+        age,
+        city,
+        membership_type,
+        total_spend,
+        items_purchased,
+        average_rating,
+        discount_applied,
+        days_since_last_purchase,
+        satisfaction_level,
+        NTILE(4) OVER (ORDER BY days_since_last_purchase DESC) AS r_score,
+        NTILE(4) OVER (ORDER BY items_purchased ASC) AS f_score,
+        NTILE(4) OVER (ORDER BY total_spend ASC) AS m_score
+    FROM customers
+)
+
+SELECT 
+    customer_id,
+    gender,
+    age,
+    city,
+    membership_type,
+    total_spend,
+    items_purchased,
+    average_rating,
+    discount_applied,
+    days_since_last_purchase,
+    satisfaction_level,
+    CASE 
+        WHEN (r_score + f_score + m_score) >= 10 THEN 'Champions / Loyal'
+        WHEN (r_score + f_score + m_score) BETWEEN 7 AND 9 THEN 'Potential Loyalists'
+        WHEN (r_score + f_score + m_score) BETWEEN 5 AND 6 THEN 'At Risk / Need Attention'
+        ELSE 'Lost / Hibernating'
+    END AS customer_segment
+FROM rfm_scores;
+
